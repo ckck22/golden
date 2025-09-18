@@ -17,6 +17,7 @@ USERS = {
 
 TARGET_TZ = ZoneInfo("America/Chicago")
 
+
 # --- 현재 상태 표시 ---
 def display_status():
     totals = {user: 0.0 for user in USERS.keys()}
@@ -25,8 +26,8 @@ def display_status():
     res = supabase.table("expenses").select("user_name, amount, created_at").execute()
     if res.data:
         for row in res.data:
-            now = datetime.datetime.now(TARGET_TZ)
-            if created_at.month == now.month and created_at.year == now.year:
+            created_at = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+            if created_at.month == datetime.datetime.now().month:  # 이번 달만 집계
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
@@ -58,7 +59,7 @@ with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 지출 내역 추가")
     
     # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
-    selected_date = st.date_input("날짜", value=datetime.date.today())
+    selected_date = st.date_input("날짜", value="today")
     
     selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
