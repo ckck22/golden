@@ -59,11 +59,6 @@ st.title("💸 금쪽이 가계부")
 st.subheader("🕵️‍♂️ 서버 시간 진단")
 now_utc = datetime.datetime.now(datetime.timezone.utc)
 now_chicago = datetime.datetime.now(TARGET_TZ)
-
-st.write(f"서버의 UTC 시간 (기준): `{now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}`")
-st.write(f"코드가 변환한 시카고 시간: `{now_chicago.strftime('%Y-%m-%d %H:%M:%S %Z')}`")
-st.write(f"시카고 날짜만 추출: `{now_chicago.date()}`")
-st.write("---")
 # --- 진단 코드 끝 ---
 
 
