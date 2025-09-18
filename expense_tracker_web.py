@@ -61,14 +61,31 @@ with st.form("expense_form", clear_on_submit=True):
     # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
     selected_date = st.date_input("날짜", value="today")
     
-    col1, col2 = st.columns(2)
-    if col1.form_submit_button("👤 강나윤", use_container_width=True):
+    # 기본 선택값 설정
+    if "selected_user" not in st.session_state:
         st.session_state["selected_user"] = "강나윤"
-    if col2.form_submit_button("👤 김채린", use_container_width=True):
-        st.session_state["selected_user"] = "김채린"
 
-    # 기본값은 "강나윤"
-    selected_user = st.session_state.get("selected_user", "강나윤")
+    col1, col2 = st.columns(2)
+
+    # 버튼 스타일링
+    btn_style_selected = "background-color:lightgreen; color:black; font-weight:bold; width:100%;"
+    btn_style_default = "background-color:white; color:black; width:100%;"
+
+    with col1:
+        if st.button("👤 강나윤", key="btn_nayoon"):
+            st.session_state["selected_user"] = "강나윤"
+        st.markdown(
+            f"<div style='{btn_style_selected if st.session_state['selected_user']=='강나윤' else btn_style_default}'>강나윤</div>",
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        if st.button("👤 김채린", key="btn_chaerin"):
+            st.session_state["selected_user"] = "김채린"
+        st.markdown(
+            f"<div style='{btn_style_selected if st.session_state['selected_user']=='김채린' else btn_style_default}'>김채린</div>",
+            unsafe_allow_html=True
+        )
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
     
     categories = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
