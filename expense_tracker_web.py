@@ -46,11 +46,24 @@ def display_status():
 
 # --- Streamlit UI 구성 ---
 st.set_page_config(page_title="금쪽이가계부", layout="centered")
-st.title("💸 금쪽이가계부")
+st.title("💸 금쪽이 가계부")
 
 display_status()
 
 st.write("---")
+
+def show_temp_message():
+    if "msg" in st.session_state:
+        msg, timestamp = st.session_state["msg"]
+        now = datetime.datetime.now()
+        # 1초 이내면 메시지 표시
+        if (now - timestamp).total_seconds() < 1:
+            st.success(msg)
+        else:
+            # 1초 지나면 자동 삭제
+            del st.session_state["msg"]
+
+
 
 with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 금쪽력 추가")
@@ -66,5 +79,8 @@ with st.form("expense_form", clear_on_submit=True):
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-        st.toast(f"{selected_user}님의 금쪽이력이 ${amount}이(가) 추가되었습니다! 🎉")
-        st.rerun() 
+        st.session_state["msg"] = (
+            f"{selected_user}님의 금쪽이력 ${amount}만큼 추가되었습니다!",
+            datetime.datetime.now()
+        )
+        st.rerun()
