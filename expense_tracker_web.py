@@ -66,11 +66,10 @@ with st.form("expense_form", clear_on_submit=True):
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-        # ✅ 메시지를 session_state에 저장
-        st.session_state["last_msg"] = f"{selected_user}님의 금쪽이력이 ${amount}만큼 추가되었습니다! 🎉"
+        st.session_state["msg"] = f"{selected_user}님의 금쪽이력이 ${amount}만큼 추가되었습니다! 🎉"
         st.rerun()
 
-# ✅ rerun 이후에 토스트 띄우기
-if "last_msg" in st.session_state:
-    st.toast(st.session_state["last_msg"])
-    del st.session_state["last_msg"]   # 한 번만 보여주고 삭제
+# rerun 이후 성공 메시지 표시 (딱 1번만)
+if "msg" in st.session_state:
+    st.success(st.session_state["msg"])
+    del st.session_state["msg"]
