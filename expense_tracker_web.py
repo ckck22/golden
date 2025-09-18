@@ -67,3 +67,4 @@ with st.form("expense_form", clear_on_submit=True):
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
         st.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
+        st.rerun()
