@@ -52,62 +52,20 @@ display_status()
 
 st.write("---")
 
-# --- 지출 추가 폼을 위한 준비 코드 ---
-
-# session_state에 'amount' 키가 없으면 0.0으로 초기화
-if "amount" not in st.session_state:
-    st.session_state.amount = 0.0
-
-# 버튼 클릭 시 금액을 변경하는 콜백 함수 정의
-def add_amount(value):
-    st.session_state.amount += value
-
-def subtract_amount(value):
-    st.session_state.amount = max(0.0, st.session_state.amount - value) # 0 미만 방지
-
-# --- 지출 추가 폼 ---
-with st.form("expense_form"):
-    st.subheader("✍️ 지출 내역 추가")
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
-    
-    # 금액 입력 부분을 +, - 버튼과 함께 배치
-    st.write("금액")
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
-    
-    # st.number_input에 key를 지정하여 session_state와 연결
-    col1.number_input(
-        "금액 입력", 
-        key="amount", 
-        min_value=0.0, 
-        format="%.2f", 
-        label_visibility="collapsed"
-    )
-    
-    # 각 버튼에 위에서 만든 함수를 on_click으로 연결
-    col2.button("➖ 1", on_click=subtract_amount, args=[1.0], use_container_width=True)
-    col3.button("➕ 1", on_click=add_amount, args=[1.0], use_container_width=True)
-    col4.button("➕ 10", on_click=add_amount, args=[10.0], use_container_width=True)
-    col5.button("➕ 100", on_click=add_amount, args=[100.0], use_container_width=True)
-    
+with st.form("expense_form", clear_on_submit=True):
+    st.subheader("✍️ 금쪽이 내역 추가")
+    selected_user = st.selectbox("금쪽이를 선택하세요", USERS.keys())
+    amount = st.number_input("금액", min_value=0.01, format="%.2f")
     description = st.text_input("어디에 사용했나요?")
-    submitted = st.form_submit_button("추가하기")
+    submitted = st.form_submit_button("금쪽력 추가하기")
     
     if submitted:
-        # 폼 제출 시 session_state에 저장된 금액을 사용
-        amount_to_submit = st.session_state.amount
+        # 데이터베이스에 정보 저장
+        supabase.table("expenses").insert({
+            "user_name": selected_user,
+            "amount": amount,
+            "description": description,
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }).execute()
         
-        if amount_to_submit > 0 and description:
-            supabase.table("expenses").insert({
-                "user_name": selected_user,
-                "amount": amount_to_submit,
-                "description": description,
-                "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
-            }).execute()
-
-            st.toast(f"{selected_user}님의 지출 ${amount_to_submit}이(가) 추가되었습니다! 🎉")
-            
-            # 제출 후 다음 입력을 위해 금액을 0으로 초기화
-            st.session_state.amount = 0.0
-            st.rerun()
-        else:
-            st.warning("금액과 내용을 모두 입력해주세요.")
+        st.rerun()
