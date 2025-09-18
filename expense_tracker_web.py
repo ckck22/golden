@@ -36,7 +36,7 @@ def display_status():
             percentage = int((total / target) * 100) if target > 0 else 0
             remaining = target - total
             st.metric(
-                label=f"👤 {user}의 총 지출",
+                label=f"👤 {user}의 총 금쪽력",
                 value=f"${total:,.2f}",
                 delta=f"${remaining:,.2f} 남음",
                 delta_color="inverse"
@@ -53,11 +53,11 @@ display_status()
 st.write("---")
 
 with st.form("expense_form", clear_on_submit=True):
-    st.subheader("✍️ 지출 내역 추가")
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    st.subheader("✍️ 금쪽이 내역 추가")
+    selected_user = st.selectbox("금쪽이를 선택하세요", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
     description = st.text_input("어디에 사용했나요?")
-    submitted = st.form_submit_button("추가하기")
+    submitted = st.form_submit_button("금쪽력 추가하기")
     
     if submitted:
         # 데이터베이스에 정보 저장
@@ -67,9 +67,5 @@ with st.form("expense_form", clear_on_submit=True):
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-
-        # # st.toast()로 깔끔하게 알림 표시
-        # st.toast(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다! 🎉")
         
-        # 페이지 새로고침 (선택사항이지만 즉시 반영을 위해 추천)
         st.rerun()
