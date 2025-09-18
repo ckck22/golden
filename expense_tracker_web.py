@@ -25,9 +25,8 @@ def display_status():
     res = supabase.table("expenses").select("user_name, amount, created_at").execute()
     if res.data:
         for row in res.data:
-        now = datetime.datetime.now(TARGET_TZ)
-        if created_at.month == now.month and created_at.year == now.year:
-
+            now = datetime.datetime.now(TARGET_TZ)
+            if created_at.month == now.month and created_at.year == now.year:
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
