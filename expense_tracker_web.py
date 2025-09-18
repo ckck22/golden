@@ -75,7 +75,7 @@ with st.form("expense_form", clear_on_submit=True):
         placeholder.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
         
         # 4. 3초 동안 메시지를 보여주기 위해 잠시 기다립니다.
-        time.sleep(3)
+        time.sleep(1.5)
         
         # 5. 페이지를 새로고침합니다. (이때 placeholder는 다시 비워집니다.)
         st.rerun()
