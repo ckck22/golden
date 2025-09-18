@@ -18,7 +18,7 @@ st.title("📜 이번 달 전체 지출 내역")
 
 # --- 데이터 불러오기 및 처리 ---
 try:
-    res = supabase.table("expenses").select("*").order("created_at", ascending=True).execute()
+    res = supabase.table("expenses").select("*").order("created_at", asc=True).execute()
 
     if res.data:
         df = pd.DataFrame(res.data)
