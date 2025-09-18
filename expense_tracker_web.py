@@ -66,7 +66,7 @@ display_status()
 st.write("---")
 
 with st.form("expense_form", clear_on_submit=True):
-    st.subheader("😋 금쪽력 추가")
+    st.subheader("✌️ 금쪽력 추가")
     
     selected_date = st.date_input("날짜", value=datetime.datetime.now(TARGET_TZ))
     
