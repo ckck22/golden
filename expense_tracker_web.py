@@ -68,8 +68,8 @@ with st.form("expense_form", clear_on_submit=True):
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
 
-        # st.toast()로 깔끔하게 알림 표시
-        st.toast(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다! 🎉")
+        # # st.toast()로 깔끔하게 알림 표시
+        # st.toast(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다! 🎉")
         
         # 페이지 새로고침 (선택사항이지만 즉시 반영을 위해 추천)
         st.rerun()
