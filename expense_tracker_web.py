@@ -63,7 +63,7 @@ def show_temp_message():
             # 1초 지나면 자동 삭제
             del st.session_state["msg"]
 
-
+show_temp_message()
 
 with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 금쪽력 추가")
