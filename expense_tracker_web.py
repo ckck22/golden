@@ -66,10 +66,17 @@ with st.form("expense_form", clear_on_submit=True):
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-        st.session_state["msg"] = f"{selected_user}님의 금쪽이력이 ${amount}만큼 추가되었습니다! 🎉"
+        st.session_state["msg"] = (
+            f"{selected_user}님의 금쪽이력이 ${amount}만큼 추가되었습니다! 🎉",
+            datetime.datetime.now()
+        )
         st.rerun()
 
-# rerun 이후 성공 메시지 표시 (딱 1번만)
+# rerun 이후 성공 메시지 표시 (1초 동안만)
 if "msg" in st.session_state:
-    st.success(st.session_state["msg"])
-    del st.session_state["msg"]
+    msg, ts = st.session_state["msg"]
+    now = datetime.datetime.now()
+    if (now - ts).total_seconds() < 1:   # 1초 이내면 표시
+        st.success(msg)
+    else:
+        del st.session_state["msg"]
