@@ -14,8 +14,14 @@ USERS = {
 def db_cursor():
     conn = None
     try:
-        # secrets를 사용한 연결 코드를 이 안으로 가져옵니다.
-        conn = psycopg2.connect(**st.secrets["postgres"])
+        # secrets.toml에서 개별 키로 불러오기
+        conn = psycopg2.connect(
+            host=st.secrets["DB_HOST"],
+            port=st.secrets["DB_PORT"],
+            dbname=st.secrets["DB_NAME"],
+            user=st.secrets["DB_USER"],
+            password=st.secrets["DB_PASSWORD"],
+        )
         with conn.cursor() as cur:
             yield cur
         conn.commit()
