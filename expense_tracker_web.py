@@ -3,6 +3,7 @@
 import streamlit as st
 import datetime
 from supabase import create_client
+import time
 
 # Supabase 연결 
 url = st.secrets["SUPABASE_URL"]
@@ -48,35 +49,33 @@ def display_status():
 st.set_page_config(page_title="금쪽이가계부", layout="centered")
 st.title("💸 금쪽이 가계부")
 
+placeholder = st.empty()
+
 display_status()
 
 st.write("---")
 
 with st.form("expense_form", clear_on_submit=True):
-    st.subheader("✍️ 금쪽력 추가")
-    selected_user = st.selectbox("어떤 금쪽이인가요?", USERS.keys())
+    st.subheader("✍️ 지출 내역 추가")
+    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
-    description = st.text_input("어디에 씀?")
+    description = st.text_input("어디에 사용했나요?")
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
+        # 2. 데이터베이스에 정보를 저장합니다.
         supabase.table("expenses").insert({
             "user_name": selected_user,
             "amount": amount,
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-        st.session_state["msg"] = (
-            f"{selected_user}님의 금쪽이력이 ${amount}만큼 추가되었습니다! 🎉",
-            datetime.datetime.now()
-        )
-        st.rerun()
 
-# rerun 이후 성공 메시지 표시 (1초 동안만)
-if "msg" in st.session_state:
-    msg, ts = st.session_state["msg"]
-    now = datetime.datetime.now()
-    if (now - ts).total_seconds() < 1:   # 1초 이내면 표시
-        st.success(msg)
-    else:
-        del st.session_state["msg"]
+        # 3. 비어있던 공간에 성공 메시지를 표시합니다.
+        placeholder.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
+        
+        # 4. 3초 동안 메시지를 보여주기 위해 잠시 기다립니다.
+        time.sleep(3)
+        
+        # 5. 페이지를 새로고침합니다. (이때 placeholder는 다시 비워집니다.)
+        st.rerun()
