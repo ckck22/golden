@@ -61,7 +61,14 @@ with st.form("expense_form", clear_on_submit=True):
     # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
     selected_date = st.date_input("날짜", value="today")
     
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    col1, col2 = st.columns(2)
+    if col1.form_submit_button("👤 강나윤", use_container_width=True):
+        st.session_state["selected_user"] = "강나윤"
+    if col2.form_submit_button("👤 김채린", use_container_width=True):
+        st.session_state["selected_user"] = "김채린"
+
+    # 기본값은 "강나윤"
+    selected_user = st.session_state.get("selected_user", "강나윤")
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
     
     categories = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
