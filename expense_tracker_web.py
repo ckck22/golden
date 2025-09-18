@@ -5,8 +5,6 @@ import datetime
 import psycopg2
 from contextlib import contextmanager
 
-DATABASE_URL = "postgresql://postgres:idkwhocares1!@db.nirsukvdxgkktnvnjwvc.supabase.co:5432/postgres"
-
 USERS = {
     "나": 800.00,
     "친구": 750.00
@@ -16,16 +14,18 @@ USERS = {
 def db_cursor():
     conn = None
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        # secrets를 사용한 연결 코드를 이 안으로 가져옵니다.
+        conn = psycopg2.connect(**st.secrets["postgres"])
         with conn.cursor() as cur:
             yield cur
         conn.commit()
     except Exception as e:
-        st.error(f"데이터베이스 오류: {e}")
+        st.error(f"🚨 데이터베이스 오류: {e}")
         yield None
     finally:
         if conn:
             conn.close()
+
 
 def setup_database():
     with db_cursor() as cur:
