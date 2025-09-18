@@ -4,22 +4,16 @@ import streamlit as st
 import datetime
 from supabase import create_client
 
-# 🔑 Supabase 연결 (secrets.toml에 저장된 키 사용)
+# Supabase 연결 
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 USERS = {
-    "나": 800.00,
-    "친구": 750.00
+    "강나윤": 1000.00,
+    "김채린": 800.00
 }
 
-# --- DB 초기화 (테이블 생성) ---
-def setup_database():
-    # supabase-py는 DDL 직접 실행 기능이 제한적 → 대신 SQL RPC 호출을 쓰거나
-    # supabase SQL Editor에서 미리 테이블 생성하는 것을 권장합니다.
-    # 아래는 "이미 테이블 만들어둔 상태"라고 가정합니다.
-    pass
 
 # --- 현재 상태 표시 ---
 def display_status():
@@ -34,7 +28,7 @@ def display_status():
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
-    user_columns = {"나": col1, "친구": col2}
+    user_columns = {"강나윤": col1, "김채린": col2}
 
     for user, total in totals.items():
         with user_columns[user]:
