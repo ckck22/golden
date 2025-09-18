@@ -18,14 +18,13 @@ st.title("📜 이번 달 전체 지출 내역")
 
 # --- 데이터 불러오기 및 처리 ---
 try:
-    res = supabase.table("expenses").select("*").order("created_at").execute()
+    # ❗❗ [수정된 부분] ❗❗
+    # order 메서드에 desc=True를 추가하여 최신순으로 정렬합니다.
+    res = supabase.table("expenses").select("*").order("created_at", desc=True).execute()
 
     if res.data:
         df = pd.DataFrame(res.data)
 
-        # ❗❗ [수정된 부분] ❗❗
-        # UTC 시간대 정보를 무시하고 날짜/시간 데이터로만 변환합니다.
-        # 이렇게 하면 '18일 00시'를 시카고의 '17일 19시'로 바꾸지 않고 '18일'로 인식합니다.
         df['created_at_dt'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
 
         # 현재 월 계산 (컴퓨터의 로컬 시간 기준)
@@ -50,6 +49,7 @@ try:
                         
                         user_df['date_only'] = user_df['created_at_dt'].dt.date
                         
+                        # 데이터가 이미 최신순이므로 그룹화해도 순서가 유지됩니다.
                         for date, group in user_df.groupby('date_only'):
                             st.subheader(f"🗓️ {date.strftime('%Y년 %m월 %d일')}")
                             
@@ -72,11 +72,11 @@ try:
 
         # --- 수정 다이얼로그 (팝업) 로직 ---
         if 'edit_id' in st.session_state:
+            # 데이터프레임에서 수정할 레코드 찾기 (id는 고유하므로 df 사용)
             record_to_edit = df[df['id'] == st.session_state.edit_id].iloc[0]
             
             @st.dialog("내역 수정하기")
             def edit_dialog():
-                # 날짜 표시 (시간대 변환 없이 그대로)
                 record_date = record_to_edit['created_at_dt'].strftime('%Y-%m-%d')
                 st.write(f"**{record_date}** 의 내역을 수정합니다.")
 
