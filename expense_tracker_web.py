@@ -55,69 +55,37 @@ display_status()
 
 st.write("---")
 
-# session_state에 'amount' 값이 없으면 0.0으로 만들어줍니다.
-if "amount" not in st.session_state:
-    st.session_state.amount = 0.0
-
-# 버튼을 눌렀을 때 실행될 함수들을 정의합니다.
-def add_amount(value):
-    st.session_state.amount += value
-
-def subtract_amount(value):
-    # 금액이 0보다 작아지지 않도록 합니다.
-    st.session_state.amount = max(0.0, st.session_state.amount - value)
-
-# --- 지출 추가 폼을 위한 준비 코드 ---
-if "amount" not in st.session_state:
-    st.session_state.amount = 0.0
-
-def add_amount(value):
-    st.session_state.amount += value
-
-def subtract_amount(value):
-    st.session_state.amount = max(0.0, st.session_state.amount - value)
-
-# --- 지출 추가 폼 ---
-with st.form("expense_form"):
+with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 지출 내역 추가")
     
-    selected_date = st.date_input("날짜 선택")
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
+    selected_date = st.date_input("날짜", value="today")
     
-    st.write("금액")
-    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
-    col1.number_input("금액 입력", key="amount", min_value=0.0, format="%.2f", label_visibility="collapsed")
-    col2.button("➖ 1", on_click=subtract_amount, args=[1.0], use_container_width=True)
-    col3.button("➕ 1", on_click=add_amount, args=[1.0], use_container_width=True)
-    col4.button("➕ 10", on_click=add_amount, args=[10.0], use_container_width=True)
-    col5.button("➕ 100", on_click=add_amount, args=[100.0], use_container_width=True)
+    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    amount = st.number_input("금액", min_value=0.01, format="%.2f")
     
     categories = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
     description = st.selectbox("카테고리를 선택하세요", categories)
     memo = st.text_input("메모 (선택사항)")
 
-    # 이 버튼이 여기에 있어야 합니다.
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        amount_to_submit = st.session_state.amount
+        # 2. 저장할 때, 현재 시간이 아닌 위에서 선택한 날짜를 사용합니다.
+        submission_timestamp = datetime.datetime(
+            selected_date.year, 
+            selected_date.month, 
+            selected_date.day,
+            tzinfo=datetime.timezone.utc 
+        )
+
+        # 데이터베이스에 정보 저장
+        supabase.table("expenses").insert({
+            "user_name": selected_user,
+            "amount": amount,
+            "description": description,
+            "memo" : memo,
+            "created_at": submission_timestamp.isoformat() # 수정된 값 사용
+        }).execute()
         
-        if amount_to_submit > 0:
-            submission_timestamp = datetime.datetime(
-                selected_date.year, 
-                selected_date.month, 
-                selected_date.day,
-                tzinfo=datetime.timezone.utc 
-            )
-            supabase.table("expenses").insert({
-                "user_name": selected_user,
-                "amount": amount_to_submit,
-                "description": description,
-                "memo": memo,
-                "created_at": submission_timestamp.isoformat()
-            }).execute()
-            st.toast(f"'{description}' 내역이 추가되었습니다! 🎉")
-            st.session_state.amount = 0.0
-            st.rerun()
-        else:
-            st.warning("금액을 0보다 크게 입력해주세요.")
+        st.rerun()
