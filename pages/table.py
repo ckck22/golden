@@ -18,8 +18,7 @@ st.title("📜 이번 달 전체 지출 내역")
 
 # --- 데이터 불러오기 및 처리 ---
 try:
-    # ❗❗ [수정된 부분] ❗❗
-    # order 메서드에 desc=True를 추가하여 최신순으로 정렬합니다.
+    # ❗❗ 1. 최신순으로 정렬 (desc=True) ❗❗
     res = supabase.table("expenses").select("*").order("created_at", desc=True).execute()
 
     if res.data:
@@ -27,16 +26,13 @@ try:
 
         df['created_at_dt'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
 
-        # 현재 월 계산 (컴퓨터의 로컬 시간 기준)
         today = datetime.date.today()
         current_month = today.month
         current_year = today.year
         
-        # 이번 달 데이터만 필터링
         df_monthly = df[(df['created_at_dt'].dt.month == current_month) & (df['created_at_dt'].dt.year == current_year)]
 
         if not df_monthly.empty:
-            # 사용자별로 데이터 분리
             user_data = {user: df_monthly[df_monthly['user_name'] == user] for user in USERS}
 
             col1, col2 = st.columns(2)
@@ -49,8 +45,8 @@ try:
                         
                         user_df['date_only'] = user_df['created_at_dt'].dt.date
                         
-                        # 데이터가 이미 최신순이므로 그룹화해도 순서가 유지됩니다.
-                        for date, group in user_df.groupby('date_only'):
+                        # ❗❗ 2. groupby가 날짜를 재정렬하지 않도록 sort=False 추가 ❗❗
+                        for date, group in user_df.groupby('date_only', sort=False):
                             st.subheader(f"🗓️ {date.strftime('%Y년 %m월 %d일')}")
                             
                             for _, row in group.iterrows():
@@ -70,9 +66,8 @@ try:
         else:
             st.info("이번 달에 기록된 지출 내역이 없습니다.")
 
-        # --- 수정 다이얼로그 (팝업) 로직 ---
+        # --- 수정/삭제 로직 (이전과 동일) ---
         if 'edit_id' in st.session_state:
-            # 데이터프레임에서 수정할 레코드 찾기 (id는 고유하므로 df 사용)
             record_to_edit = df[df['id'] == st.session_state.edit_id].iloc[0]
             
             @st.dialog("내역 수정하기")
@@ -101,7 +96,6 @@ try:
                         st.rerun()
             edit_dialog()
 
-        # --- 삭제 확인 다이얼로그 (팝업) 로직 ---
         if 'delete_id' in st.session_state:
             record_to_delete = df[df['id'] == st.session_state.delete_id].iloc[0]
             
