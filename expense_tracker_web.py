@@ -66,18 +66,18 @@ display_status()
 st.write("---")
 
 with st.form("expense_form", clear_on_submit=True):
-    st.subheader("✍️ 지출 내역 추가")
+    st.subheader("😋 금쪽력 추가")
     
     selected_date = st.date_input("날짜", value=datetime.datetime.now(TARGET_TZ))
     
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    selected_user = st.selectbox("어떤 금쪽이인가요?", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
     
     categories = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
-    description = st.selectbox("카테고리를 선택하세요", categories)
+    description = st.selectbox("카테고리", categories)
     memo = st.text_input("메모 (선택사항)")
 
-    submitted = st.form_submit_button("추가하기")
+    submitted = st.form_submit_button("금쪽력 추가하기")
     
     if submitted:
         submission_timestamp = datetime.datetime(
