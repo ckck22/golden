@@ -45,18 +45,18 @@ def display_status():
             st.caption(f"목표 금액($ {target:,.2f})의 {percentage}% 사용")
 
 # --- Streamlit UI 구성 ---
-st.set_page_config(page_title="친구와 돈 관리", layout="centered")
-st.title("💸 친구와 함께 돈 관리")
+st.set_page_config(page_title="금쪽이가계부", layout="centered")
+st.title("💸 금쪽이가계부")
 
 display_status()
 
 st.write("---")
 
 with st.form("expense_form", clear_on_submit=True):
-    st.subheader("✍️ 지출 내역 추가")
-    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
+    st.subheader("✍️ 금쪽력 추가")
+    selected_user = st.selectbox("어떤 금쪽이인가요?", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
-    description = st.text_input("어디에 사용했나요?")
+    description = st.text_input("어디에 씀?")
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
@@ -66,5 +66,5 @@ with st.form("expense_form", clear_on_submit=True):
             "description": description,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
-        st.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
-        st.rerun()
+        st.toast(f"{selected_user}님의 금쪽이력이 ${amount}이(가) 추가되었습니다! 🎉")
+        st.rerun() 
