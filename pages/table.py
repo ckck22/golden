@@ -1,7 +1,25 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
-import datetime
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import os # 파일 경로를 위해 os 모듈 추가
+
+# --- [수정] 한글 폰트 설정 (앱에 포함된 폰트 사용) ---
+# 앱이 어디서 실행되든 동일한 폰트를 사용하게 하여 깨짐 현상을 방지합니다.
+# 'NanumGothic.ttf' 파일이 이 파이썬 파일과 같은 위치에 있다고 가정합니다.
+font_path = os.path.join(os.path.dirname(__file__), 'NanumGothic.ttf')
+
+# 폰트 파일이 있는지 확인
+if os.path.exists(font_path):
+    font_name = fm.FontProperties(fname=font_path).get_name()
+    plt.rc('font', family=font_name)
+    plt.rcParams['axes.unicode_minus'] = False
+else:
+    st.warning(
+        "폰트 파일을 찾을 수 없습니다. 'NanumGothic.ttf' 파일을 현재 폴더에 추가해주세요."
+        "차트의 한글이 깨질 수 있습니다."
+    )
 
 # --- Supabase 연결 ---
 url = st.secrets["SUPABASE_URL"]
@@ -10,119 +28,73 @@ supabase = create_client(url, key)
 
 # --- 기본 설정 ---
 USERS = ["강나윤", "김채린"]
-CATEGORIES = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
 
+st.set_page_config(page_title="지출 통계", layout="wide")
+st.title("📊 월별 지출 통계")
 
-st.set_page_config(page_title="전체 내역 보기", layout="wide")
-st.title("📜 이번 달 전체 지출 내역")
-
-# --- 데이터 불러오기 및 처리 ---
+# --- 데이터 불러오기 ---
 try:
     res = supabase.table("expenses").select("*").order("created_at", desc=True).execute()
-
+    
     if res.data:
         df = pd.DataFrame(res.data)
+        # 시간대 정보 무시하고 날짜 변환
+        df['created_at'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
+        df['month'] = df['created_at'].dt.strftime('%Y년 %m월')
 
-        # ❗❗ [수정된 부분] ❗❗
-        # UTC 시간대 정보를 무시하고 날짜/시간 데이터로만 변환합니다.
-        # 이렇게 하면 '18일 00시'를 시카고의 '17일 19시'로 바꾸지 않고 '18일'로 인식합니다.
-        df['created_at_dt'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
-
-        # 현재 월 계산 (컴퓨터의 로컬 시간 기준)
-        today = datetime.date.today()
-        current_month = today.month
-        current_year = today.year
+        # --- 필터링 옵션 ---
+        col1, col2 = st.columns(2)
         
-        # 이번 달 데이터만 필터링
-        df_monthly = df[(df['created_at_dt'].dt.month == current_month) & (df['created_at_dt'].dt.year == current_year)]
+        unique_months = sorted(df['month'].unique(), reverse=True)
+        selected_month = col1.selectbox("분석할 월을 선택하세요:", unique_months)
+        
+        # ❗❗ [수정] "전체" 옵션 제거하고 USERS 리스트만 사용 ❗❗
+        selected_user = col2.selectbox("누구의 통계를 볼까요?:", USERS)
 
-        if not df_monthly.empty:
-            # 사용자별로 데이터 분리
-            user_data = {user: df_monthly[df_monthly['user_name'] == user] for user in USERS}
+        # --- 데이터 처리 ---
+        # 1. 월 필터링
+        df_month_filtered = df[df['month'] == selected_month]
+        
+        # 2. ❗❗ [수정] 사용자 필터링 로직 간소화 ❗❗
+        df_selected = df_month_filtered[df_month_filtered['user_name'] == selected_user]
+        st.subheader(f"'{selected_month}' {selected_user}님 지출 분석")
 
-            col1, col2 = st.columns(2)
-            columns = {USERS[0]: col1, USERS[1]: col2}
+        if not df_selected.empty:
+            # --- 요약 정보 표시 ---
+            total_spent = df_selected['amount'].sum()
+            avg_spent = df_selected['amount'].mean()
+            expense_count = len(df_selected)
 
-            for user, user_df in user_data.items():
-                if not user_df.empty:
-                    with columns[user]:
-                        st.header(f"👤 {user}")
-                        
-                        user_df['date_only'] = user_df['created_at_dt'].dt.date
-                        
-                        for date, group in user_df.groupby('date_only'):
-                            st.subheader(f"🗓️ {date.strftime('%Y년 %m월 %d일')}")
-                            
-                            for _, row in group.iterrows():
-                                sub_col1, sub_col2, sub_col3 = st.columns([0.7, 0.15, 0.15])
-                                with sub_col1:
-                                    st.markdown(f"- **[{row['description']}]** ${row['amount']:,.0f}")
-                                    if pd.notna(row['memo']) and row['memo']:
-                                        st.caption(f"📝 {row['memo']}")
+            metric_col1, metric_col2, metric_col3 = st.columns(3)
+            metric_col1.metric("총 지출액", f"${total_spent:,.0f} ")
+            metric_col2.metric("평균 지출액", f"${avg_spent:,.0f} ")
+            metric_col3.metric("총 지출 건수", f"{expense_count} 건")
+            st.divider()
 
-                                with sub_col2:
-                                    if st.button("수정", key=f"edit_{row['id']}", use_container_width=True):
-                                        st.session_state.edit_id = row['id']
-                                with sub_col3:
-                                    if st.button("삭제", key=f"delete_{row['id']}", use_container_width=True):
-                                        st.session_state.delete_id = row['id']
-                            st.divider()
+            # --- 카테고리별 통계 ---
+            category_summary = df_selected.groupby('description')['amount'].sum().sort_values(ascending=False)
+            
+            chart_col, data_col = st.columns([0.6, 0.4])
+            with chart_col:
+                st.write("#### 지출 비율 (원형 차트)")
+                if not category_summary.empty:
+                    fig, ax = plt.subplots(figsize=(8, 6))
+                    # 차트 라벨에 한글이 표시되도록 설정
+                    labels = category_summary.index
+                    ax.pie(category_summary, labels=labels, autopct='%1.1f%%', startangle=90, textprops={'fontsize': 12})
+                    ax.axis('equal')
+                    st.pyplot(fig)
+                else:
+                    st.info("표시할 카테고리 데이터가 없습니다.")
+            
+            with data_col:
+                st.write("#### 상세 데이터")
+                st.dataframe(category_summary.reset_index().rename(columns={'description': '카테고리', 'amount': '금액'}))
+
         else:
-            st.info("이번 달에 기록된 지출 내역이 없습니다.")
-
-        # --- 수정 다이얼로그 (팝업) 로직 ---
-        if 'edit_id' in st.session_state:
-            record_to_edit = df[df['id'] == st.session_state.edit_id].iloc[0]
-            
-            @st.dialog("내역 수정하기")
-            def edit_dialog():
-                # 날짜 표시 (시간대 변환 없이 그대로)
-                record_date = record_to_edit['created_at_dt'].strftime('%Y-%m-%d')
-                st.write(f"**{record_date}** 의 내역을 수정합니다.")
-
-                with st.form("dialog_edit_form"):
-                    try:
-                        current_category_index = CATEGORIES.index(record_to_edit['description'])
-                    except ValueError:
-                        current_category_index = 0
-                    new_description = st.selectbox("카테고리", options=CATEGORIES, index=current_category_index)
-                    new_amount = st.number_input("금액", value=float(record_to_edit['amount']), format="%.2f")
-                    new_memo = st.text_input("메모", value=record_to_edit.get('memo', ''))
-                    
-                    if st.form_submit_button("수정 완료"):
-                        supabase.table("expenses").update({
-                            "amount": new_amount, 
-                            "description": new_description,
-                            "memo": new_memo
-                        }).eq("id", st.session_state.edit_id).execute()
-                        
-                        del st.session_state.edit_id
-                        st.toast("성공적으로 수정되었습니다! 🎉")
-                        st.rerun()
-            edit_dialog()
-
-        # --- 삭제 확인 다이얼로그 (팝업) 로직 ---
-        if 'delete_id' in st.session_state:
-            record_to_delete = df[df['id'] == st.session_state.delete_id].iloc[0]
-            
-            @st.dialog("삭제 확인")
-            def delete_dialog():
-                st.warning(f"정말로 아래 내역을 삭제하시겠습니까?")
-                st.info(f"**[{record_to_delete['description']}]** ${record_to_delete['amount']:,.0f} - {record_to_delete.get('memo', '')}")
-                
-                col1, col2 = st.columns(2)
-                if col1.button("예, 삭제합니다"):
-                    supabase.table("expenses").delete().eq("id", st.session_state.delete_id).execute()
-                    del st.session_state.delete_id
-                    st.toast("삭제되었습니다.")
-                    st.rerun()
-                if col2.button("아니요"):
-                    del st.session_state.delete_id
-                    st.rerun()
-            delete_dialog()
-
+            st.info("선택하신 조건에 해당하는 지출 내역이 없습니다.")
     else:
         st.warning("아직 기록된 지출 내역이 없습니다.")
 
 except Exception as e:
-    st.error(f"데이터를 불러오는 중 오류가 발생했습니다: {e}")
+    st.error(f"데이터를 분석하는 중 오류가 발생했습니다: {e}")
