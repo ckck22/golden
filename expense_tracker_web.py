@@ -3,7 +3,6 @@
 import streamlit as st
 import datetime
 from supabase import create_client
-import time
 
 # Supabase 연결 
 url = st.secrets["SUPABASE_URL"]
@@ -49,8 +48,6 @@ def display_status():
 st.set_page_config(page_title="금쪽이가계부", layout="centered")
 st.title("💸 금쪽이 가계부")
 
-placeholder = st.empty()
-
 display_status()
 
 st.write("---")
@@ -63,7 +60,7 @@ with st.form("expense_form", clear_on_submit=True):
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        # 2. 데이터베이스에 정보를 저장합니다.
+        # 데이터베이스에 정보 저장
         supabase.table("expenses").insert({
             "user_name": selected_user,
             "amount": amount,
@@ -71,11 +68,8 @@ with st.form("expense_form", clear_on_submit=True):
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
         }).execute()
 
-        # 3. 비어있던 공간에 성공 메시지를 표시합니다.
-        placeholder.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
+        # st.toast()로 깔끔하게 알림 표시
+        st.toast(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다! 🎉")
         
-        # 4. 3초 동안 메시지를 보여주기 위해 잠시 기다립니다.
-        time.sleep(1.5)
-        
-        # 5. 페이지를 새로고침합니다. (이때 placeholder는 다시 비워집니다.)
+        # 페이지 새로고침 (선택사항이지만 즉시 반영을 위해 추천)
         st.rerun()
