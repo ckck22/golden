@@ -10,6 +10,10 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
+st.subheader("🕵️‍♂️ 서버 시간 진단")
+now_utc = datetime.datetime.now(datetime.timezone.utc)
+now_chicago = datetime.datetime.now(TARGET_TZ)
+
 USERS = {
     "강나윤": 1000.00,
     "김채린": 800.00
