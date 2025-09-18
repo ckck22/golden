@@ -56,7 +56,7 @@ try:
                                 with sub_col1:
                                     # ❗❗ 1. 메모 표시 수정 ❗❗
                                     # 카테고리와 금액을 먼저 표시
-                                    st.markdown(f"- **[{row['description']}]** {row['amount']:,.0f}원")
+                                    st.markdown(f"- **[{row['description']}]** ${row['amount']:,.0f}")
                                     # 메모가 있는 경우에만 들여쓰기해서 표시
                                     if pd.notna(row['memo']) and row['memo']:
                                         st.caption(f"📝 {row['memo']}")
@@ -114,7 +114,7 @@ try:
             @st.dialog("삭제 확인")
             def delete_dialog():
                 st.warning(f"정말로 아래 내역을 삭제하시겠습니까?")
-                st.info(f"**[{record_to_delete['description']}]** {record_to_delete['amount']:,.0f}원 - {record_to_delete.get('memo', '')}")
+                st.info(f"**[{record_to_delete['description']}]** ${record_to_delete['amount']:,.0f} - {record_to_delete.get('memo', '')}")
                 
                 col1, col2 = st.columns(2)
                 if col1.button("예, 삭제합니다"):
