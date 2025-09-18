@@ -2,68 +2,36 @@
 
 import streamlit as st
 import datetime
-import psycopg2
-from contextlib import contextmanager
+from supabase import create_client
+
+# 🔑 Supabase 연결 (secrets.toml에 저장된 키 사용)
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
 USERS = {
     "나": 800.00,
     "친구": 750.00
 }
 
-@contextmanager
-def db_cursor():
-    conn = None
-    try:
-        # secrets.toml에서 개별 키로 불러오기
-        conn = psycopg2.connect(
-            host=st.secrets["DB_HOST"],
-            port=st.secrets["DB_PORT"],
-            dbname=st.secrets["DB_NAME"],
-            user=st.secrets["DB_USER"],
-            password=st.secrets["DB_PASSWORD"],
-            sslmode="require"
-        )
-        with conn.cursor() as cur:
-            yield cur
-        conn.commit()
-    except Exception as e:
-        st.error(f"🚨 데이터베이스 오류: {e}")
-        yield None
-    finally:
-        if conn:
-            conn.close()
-
-
+# --- DB 초기화 (테이블 생성) ---
 def setup_database():
-    with db_cursor() as cur:
-        if cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS expenses (
-                    id SERIAL PRIMARY KEY,
-                    user_name VARCHAR(50) NOT NULL,
-                    amount REAL NOT NULL,
-                    description TEXT,
-                    created_at TIMESTAMPTZ NOT NULL
-                );
-            """)
-    print("데이터베이스 테이블 준비 완료.")
+    # supabase-py는 DDL 직접 실행 기능이 제한적 → 대신 SQL RPC 호출을 쓰거나
+    # supabase SQL Editor에서 미리 테이블 생성하는 것을 권장합니다.
+    # 아래는 "이미 테이블 만들어둔 상태"라고 가정합니다.
+    pass
 
-# --- Streamlit UI 구성 ---
-st.set_page_config(page_title="친구와 돈 관리", layout="centered")
-st.title("💸 친구와 함께 돈 관리")
-
+# --- 현재 상태 표시 ---
 def display_status():
     totals = {user: 0.0 for user in USERS.keys()}
-    with db_cursor() as cur:
-        if cur:
-            cur.execute("""
-                SELECT user_name, SUM(amount) FROM expenses
-                WHERE DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())
-                GROUP BY user_name;
-            """)
-            for row in cur.fetchall():
-                user, total = row
-                if user in totals: totals[user] = float(total)
+    
+    # 이번 달 지출 합계 불러오기
+    res = supabase.table("expenses").select("user_name, amount, created_at").execute()
+    if res.data:
+        for row in res.data:
+            created_at = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+            if created_at.month == datetime.datetime.now().month:  # 이번 달만 집계
+                totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
     user_columns = {"나": col1, "친구": col2}
@@ -73,11 +41,19 @@ def display_status():
             target = USERS.get(user, 0)
             percentage = int((total / target) * 100) if target > 0 else 0
             remaining = target - total
-            st.metric(label=f"👤 {user}의 총 지출", value=f"${total:,.2f}", delta=f"${remaining:,.2f} 남음", delta_color="inverse")
-            st.progress(percentage)
+            st.metric(
+                label=f"👤 {user}의 총 지출",
+                value=f"${total:,.2f}",
+                delta=f"${remaining:,.2f} 남음",
+                delta_color="inverse"
+            )
+            st.progress(min(percentage, 100))
             st.caption(f"목표 금액($ {target:,.2f})의 {percentage}% 사용")
 
-setup_database()
+# --- Streamlit UI 구성 ---
+st.set_page_config(page_title="친구와 돈 관리", layout="centered")
+st.title("💸 친구와 함께 돈 관리")
+
 display_status()
 
 st.write("---")
@@ -90,10 +66,10 @@ with st.form("expense_form", clear_on_submit=True):
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        with db_cursor() as cur:
-            if cur:
-                cur.execute(
-                    "INSERT INTO expenses (user_name, amount, description, created_at) VALUES (%s, %s, %s, %s)",
-                    (selected_user, amount, description, datetime.datetime.now(datetime.timezone.utc))
-                )
+        supabase.table("expenses").insert({
+            "user_name": selected_user,
+            "amount": amount,
+            "description": description,
+            "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+        }).execute()
         st.success(f"{selected_user}님의 지출 ${amount}이(가) 추가되었습니다!")
