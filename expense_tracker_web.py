@@ -56,7 +56,6 @@ st.title("💸 금쪽이 가계부")
 
 
 # --- 진단 코드 시작 (정확한 위치) ---
-st.subheader("🕵️‍♂️ 서버 시간 진단")
 now_utc = datetime.datetime.now(datetime.timezone.utc)
 now_chicago = datetime.datetime.now(TARGET_TZ)
 # --- 진단 코드 끝 ---
