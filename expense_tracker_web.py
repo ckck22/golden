@@ -5,43 +5,31 @@ import datetime
 from supabase import create_client
 from zoneinfo import ZoneInfo
 
-# Supabase 연결 
+# --- 기본 설정 (이 부분이 진단 코드보다 먼저 실행되어야 합니다) ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
-
 
 USERS = {
     "강나윤": 1000.00,
     "김채린": 800.00
 }
 
-# 1. 기준 시간대를 명확히 정의 (수정 없음)
 TARGET_TZ = ZoneInfo("America/Chicago")
 
-st.subheader("🕵️‍♂️ 서버 시간 진단")
-now_utc = datetime.datetime.now(datetime.timezone.utc)
-now_chicago = datetime.datetime.now(TARGET_TZ)
 
-
-# --- 현재 상태 표시 ---
+# --- 함수 정의 ---
 def display_status():
     totals = {user: 0.0 for user in USERS.keys()}
     
-    # 2. 시카고 기준 현재 시간을 변수로 저장
     chicago_now = datetime.datetime.now(TARGET_TZ)
     
-    # 이번 달 지출 합계 불러오기
     res = supabase.table("expenses").select("user_name, amount, created_at").execute()
     if res.data:
         for row in res.data:
-            # DB에서 가져온 UTC 시간을 datetime 객체로 변환
             created_at_utc = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
-            
-            # 3. UTC 시간을 시카고 시간으로 변환
             created_at_local = created_at_utc.astimezone(TARGET_TZ)
             
-            # 4. 시카고 시간 기준으로 이번 달 데이터인지 비교
             if created_at_local.month == chicago_now.month and created_at_local.year == chicago_now.year:
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
@@ -66,6 +54,19 @@ def display_status():
 st.set_page_config(page_title="금쪽이가계부", layout="centered")
 st.title("💸 금쪽이 가계부")
 
+
+# --- 진단 코드 시작 (정확한 위치) ---
+st.subheader("🕵️‍♂️ 서버 시간 진단")
+now_utc = datetime.datetime.now(datetime.timezone.utc)
+now_chicago = datetime.datetime.now(TARGET_TZ)
+
+st.write(f"서버의 UTC 시간 (기준): `{now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}`")
+st.write(f"코드가 변환한 시카고 시간: `{now_chicago.strftime('%Y-%m-%d %H:%M:%S %Z')}`")
+st.write(f"시카고 날짜만 추출: `{now_chicago.date()}`")
+st.write("---")
+# --- 진단 코드 끝 ---
+
+
 display_status()
 
 st.write("---")
@@ -73,7 +74,6 @@ st.write("---")
 with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 지출 내역 추가")
     
-    # 5. 날짜 입력창의 기본값을 시카고 현재 날짜로 설정
     selected_date = st.date_input("날짜", value=datetime.datetime.now(TARGET_TZ))
     
     selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
@@ -86,8 +86,6 @@ with st.form("expense_form", clear_on_submit=True):
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        # 사용자가 선택한 날짜(date)를 시간 정보가 포함된 datetime 객체로 변환
-        # 데이터는 항상 UTC 기준으로 저장하는 것이 좋습니다.
         submission_timestamp = datetime.datetime(
             selected_date.year, 
             selected_date.month, 
@@ -95,7 +93,6 @@ with st.form("expense_form", clear_on_submit=True):
             tzinfo=datetime.timezone.utc 
         )
 
-        # 데이터베이스에 정보 저장
         supabase.table("expenses").insert({
             "user_name": selected_user,
             "amount": amount,
