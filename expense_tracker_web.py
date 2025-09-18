@@ -15,6 +15,7 @@ USERS = {
     "김채린": 800.00
 }
 
+# 1. 기준 시간대를 명확히 정의 (수정 없음)
 TARGET_TZ = ZoneInfo("America/Chicago")
 
 
@@ -22,12 +23,21 @@ TARGET_TZ = ZoneInfo("America/Chicago")
 def display_status():
     totals = {user: 0.0 for user in USERS.keys()}
     
+    # 2. 시카고 기준 현재 시간을 변수로 저장
+    chicago_now = datetime.datetime.now(TARGET_TZ)
+    
     # 이번 달 지출 합계 불러오기
     res = supabase.table("expenses").select("user_name, amount, created_at").execute()
     if res.data:
         for row in res.data:
-            created_at = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
-            if created_at.month == datetime.datetime.now().month:  # 이번 달만 집계
+            # DB에서 가져온 UTC 시간을 datetime 객체로 변환
+            created_at_utc = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+            
+            # 3. UTC 시간을 시카고 시간으로 변환
+            created_at_local = created_at_utc.astimezone(TARGET_TZ)
+            
+            # 4. 시카고 시간 기준으로 이번 달 데이터인지 비교
+            if created_at_local.month == chicago_now.month and created_at_local.year == chicago_now.year:
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
@@ -58,8 +68,8 @@ st.write("---")
 with st.form("expense_form", clear_on_submit=True):
     st.subheader("✍️ 지출 내역 추가")
     
-    # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
-    selected_date = st.date_input("날짜", value="today")
+    # 5. 날짜 입력창의 기본값을 시카고 현재 날짜로 설정
+    selected_date = st.date_input("날짜", value=datetime.datetime.now(TARGET_TZ))
     
     selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
     amount = st.number_input("금액", min_value=0.01, format="%.2f")
@@ -71,7 +81,8 @@ with st.form("expense_form", clear_on_submit=True):
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        # 2. 저장할 때, 현재 시간이 아닌 위에서 선택한 날짜를 사용합니다.
+        # 사용자가 선택한 날짜(date)를 시간 정보가 포함된 datetime 객체로 변환
+        # 데이터는 항상 UTC 기준으로 저장하는 것이 좋습니다.
         submission_timestamp = datetime.datetime(
             selected_date.year, 
             selected_date.month, 
@@ -85,7 +96,7 @@ with st.form("expense_form", clear_on_submit=True):
             "amount": amount,
             "description": description,
             "memo" : memo,
-            "created_at": submission_timestamp.isoformat() # 수정된 값 사용
+            "created_at": submission_timestamp.isoformat()
         }).execute()
         
         st.rerun()
