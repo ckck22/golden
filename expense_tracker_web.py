@@ -21,6 +21,7 @@ def db_cursor():
             dbname=st.secrets["DB_NAME"],
             user=st.secrets["DB_USER"],
             password=st.secrets["DB_PASSWORD"],
+            sslmode="require"
         )
         with conn.cursor() as cur:
             yield cur
