@@ -1,33 +1,41 @@
-# expense_tracker_web.py
-
 import streamlit as st
 import datetime
 from supabase import create_client
 from zoneinfo import ZoneInfo
 
-# Supabase 연결 
+# --- Supabase 연결 ---
+# Streamlit Secrets에 설정된 정보를 사용합니다.
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
+# --- 기본 설정 ---
 USERS = {
     "강나윤": 1000.00,
     "김채린": 800.00
 }
+CATEGORIES = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
 
+# 시간대 설정 (미국 중부)
 TARGET_TZ = ZoneInfo("America/Chicago")
 
-
-# --- 현재 상태 표시 ---
+# --- 함수 정의 ---
 def display_status():
+    """데이터베이스에서 현재 달의 지출 현황을 가져와 화면에 표시합니다."""
     totals = {user: 0.0 for user in USERS.keys()}
     
-    # 이번 달 지출 합계 불러오기
+    # 현재 시간을 우리가 설정한 시간대 기준으로 가져옵니다.
+    now_local = datetime.datetime.now(TARGET_TZ)
+    
     res = supabase.table("expenses").select("user_name, amount, created_at").execute()
     if res.data:
         for row in res.data:
-            created_at = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
-            if created_at.month == datetime.datetime.now().month:  # 이번 달만 집계
+            # DB의 UTC 시간을 우리가 설정한 시간대로 변환합니다.
+            created_at_utc = datetime.datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+            created_at_local = created_at_utc.astimezone(TARGET_TZ)
+            
+            # 현재 년도와 월이 일치하는지 정확히 비교합니다.
+            if created_at_local.year == now_local.year and created_at_local.month == now_local.month:
                 totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     col1, col2 = st.columns(2)
@@ -39,7 +47,7 @@ def display_status():
             percentage = int((total / target) * 100) if target > 0 else 0
             remaining = target - total
             st.metric(
-                label=f"👤 {user}의 총 금쪽력",
+                label=f"👤 {user}의 총 지출",
                 value=f"${total:,.2f}",
                 delta=f"${remaining:,.2f} 남음",
                 delta_color="inverse"
@@ -48,68 +56,62 @@ def display_status():
             st.caption(f"목표 금액($ {target:,.2f})의 {percentage}% 사용")
 
 # --- Streamlit UI 구성 ---
-st.set_page_config(page_title="금쪽이가계부", layout="centered")
-st.title("💸 금쪽이 가계부")
+st.set_page_config(page_title="친구와 돈 관리", layout="centered")
+st.title("💸 친구와 함께 돈 관리")
 
 display_status()
-
 st.write("---")
 
-with st.form("expense_form", clear_on_submit=True):
+# --- 지출 추가 폼을 위한 준비 코드 ---
+if "amount" not in st.session_state:
+    st.session_state.amount = 0.0
+
+def add_amount(value):
+    st.session_state.amount += value
+
+def subtract_amount(value):
+    st.session_state.amount = max(0.0, st.session_state.amount - value)
+
+# --- 지출 추가 폼 ---
+with st.form("expense_form"):
     st.subheader("✍️ 지출 내역 추가")
     
-    # 1. 날짜를 선택할 수 있는 입력창을 추가합니다. 기본값은 오늘입니다.
-    selected_date = st.date_input("날짜", value="today")
+    selected_date = st.date_input("날짜", value=datetime.datetime.now(TARGET_TZ))
+    selected_user = st.selectbox("누가 지출했나요?", USERS.keys())
     
-    # 기본 선택값 설정
-    if "selected_user" not in st.session_state:
-        st.session_state["selected_user"] = "강나윤"
-
-    col1, col2 = st.columns(2)
-
-    # 버튼 스타일링
-    btn_style_selected = "background-color:lightgreen; color:black; font-weight:bold; width:100%;"
-    btn_style_default = "background-color:white; color:black; width:100%;"
-
-    with col1:
-        if st.button("👤 강나윤", key="btn_nayoon"):
-            st.session_state["selected_user"] = "강나윤"
-        st.markdown(
-            f"<div style='{btn_style_selected if st.session_state['selected_user']=='강나윤' else btn_style_default}'>강나윤</div>",
-            unsafe_allow_html=True
-        )
-
-    with col2:
-        if st.button("👤 김채린", key="btn_chaerin"):
-            st.session_state["selected_user"] = "김채린"
-        st.markdown(
-            f"<div style='{btn_style_selected if st.session_state['selected_user']=='김채린' else btn_style_default}'>김채린</div>",
-            unsafe_allow_html=True
-        )
-    amount = st.number_input("금액", min_value=0.01, format="%.2f")
+    st.write("금액")
+    col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
+    col1.number_input("금액 입력", key="amount", min_value=0.0, format="%.2f", label_visibility="collapsed")
+    col2.button("➖ 1", on_click=subtract_amount, args=[1.0], use_container_width=True)
+    col3.button("➕ 1", on_click=add_amount, args=[1.0], use_container_width=True)
+    col4.button("➕ 10", on_click=add_amount, args=[10.0], use_container_width=True)
+    col5.button("➕ 100", on_click=add_amount, args=[100.0], use_container_width=True)
     
-    categories = ["식비", "교통", "주거/통신", "쇼핑", "문화/여가", "기타"]
-    description = st.selectbox("카테고리를 선택하세요", categories)
+    description = st.selectbox("카테고리를 선택하세요", CATEGORIES)
     memo = st.text_input("메모 (선택사항)")
 
     submitted = st.form_submit_button("추가하기")
     
     if submitted:
-        # 2. 저장할 때, 현재 시간이 아닌 위에서 선택한 날짜를 사용합니다.
-        submission_timestamp = datetime.datetime(
-            selected_date.year, 
-            selected_date.month, 
-            selected_date.day,
-            tzinfo=datetime.timezone.utc 
-        )
-
-        # 데이터베이스에 정보 저장
-        supabase.table("expenses").insert({
-            "user_name": selected_user,
-            "amount": amount,
-            "description": description,
-            "memo" : memo,
-            "created_at": submission_timestamp.isoformat() # 수정된 값 사용
-        }).execute()
+        amount_to_submit = st.session_state.amount
         
-        st.rerun()
+        if amount_to_submit > 0:
+            submission_timestamp = datetime.datetime(
+                selected_date.year, 
+                selected_date.month, 
+                selected_date.day,
+                tzinfo=datetime.timezone.utc 
+            )
+            supabase.table("expenses").insert({
+                "user_name": selected_user,
+                "amount": amount_to_submit,
+                "description": description,
+                "memo": memo,
+                "created_at": submission_timestamp.isoformat()
+            }).execute()
+
+            st.toast(f"'{description}' 내역이 추가되었습니다! 🎉")
+            st.session_state.amount = 0.0
+            st.rerun()
+        else:
+            st.warning("금액을 0보다 크게 입력해주세요.")
