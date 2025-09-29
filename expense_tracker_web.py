@@ -11,7 +11,7 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 USERS = {
-    "강나윤": 650.00,
+    "강나윤": 600.00,
     "김채린": 400.00
 }
 
