@@ -51,12 +51,12 @@ def display_status():
             totals[row["user_name"]] = totals.get(row["user_name"], 0) + float(row["amount"])
 
     # --- 진단용 코드 (펼쳐서 확인 가능) ---
-    with st.expander("🔍 개발자 진단 도구"):
-        st.write("현재 시간 (시카고):", now_local.strftime('%Y-%m-%d %H:%M:%S'))
-        st.write("이번 달 시작 (시카고):", first_day_of_month.strftime('%Y-%m-%d %H:%M:%S'))
-        st.write("DB에 요청한 UTC 시작 시간:", start_utc.strftime('%Y-%m-%d %H:%M:%S'))
-        st.write("DB에 요청한 UTC 종료 시간:", end_utc.strftime('%Y-%m-%d %H:%M:%S'))
-        st.write("DB에서 가져온 '이번 달' 데이터:", res.data)
+    # with st.expander("🔍 개발자 진단 도구"):
+    #     st.write("현재 시간 (시카고):", now_local.strftime('%Y-%m-%d %H:%M:%S'))
+    #     st.write("이번 달 시작 (시카고):", first_day_of_month.strftime('%Y-%m-%d %H:%M:%S'))
+    #     st.write("DB에 요청한 UTC 시작 시간:", start_utc.strftime('%Y-%m-%d %H:%M:%S'))
+    #     st.write("DB에 요청한 UTC 종료 시간:", end_utc.strftime('%Y-%m-%d %H:%M:%S'))
+    #     st.write("DB에서 가져온 '이번 달' 데이터:", res.data)
 
     # --- 대시보드 표시 ---
     col1, col2 = st.columns(2)
