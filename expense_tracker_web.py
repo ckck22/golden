@@ -68,7 +68,7 @@ def display_status():
             percentage = int((total / target) * 100) if target > 0 else 0
             remaining = target - total
             st.metric(
-                label=f"👤 {user}의 총 지출",
+                label=f"👤 {user}의 총 금쪽력",
                 value=f"${total:,.2f}",
                 delta=f"${remaining:,.2f} 남음",
                 delta_color="inverse"
@@ -110,7 +110,7 @@ with st.form("expense_form", clear_on_submit=True):
             selected_date.year, 
             selected_date.month, 
             selected_date.day,
-            tzinfo=datetime.timezone.utc 
+            tzinfo=TARGET_TZ
         )
 
         supabase.table("expenses").insert({
