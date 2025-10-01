@@ -8,36 +8,15 @@ import os
 st.set_page_config(page_title="지출 통계", layout="wide")
 st.title("📊 월별 지출 통계")
 
-# --- [수정] 한글 폰트 설정 (디버깅 코드 추가) ---
-st.subheader("⚠️ 폰트 경로 디버깅")
-
-# 1. 현재 파일의 디렉토리 경로
+# --- 한글 폰트 설정 (이전과 동일) ---
+# ... (폰트 설정 코드는 그대로 둡니다) ...
 try:
-    current_dir = os.path.dirname(__file__)
-    st.write(f"1. 스크립트가 실행 중인 폴더: `{current_dir}`")
-
-    # 2. 폰트 파일의 전체 경로
-    font_path = os.path.join(current_dir, 'NanumGothic.ttf')
-    st.write(f"2. 코드가 찾으려는 폰트 파일의 전체 경로: `{font_path}`")
-
-    # 3. 파일 존재 여부 확인
-    font_exists = os.path.exists(font_path)
-    st.write(f"3. 위 경로에 파일이 실제로 존재하나요?: **{font_exists}**")
-
-    if font_exists:
-        font_name = fm.FontProperties(fname=font_path).get_name()
-        plt.rc('font', family=font_name)
-        plt.rcParams['axes.unicode_minus'] = False
-        st.success("폰트 파일을 성공적으로 로드했습니다. 이제 차트가 정상적으로 보여야 합니다.")
-    else:
-        st.error(
-            "폰트 파일을 찾을 수 없습니다! 위 '2번 경로'에 'NanumGothic.ttf' 파일이 있는지, 파일 이름에 오타가 없는지 확인해주세요."
-        )
-except Exception as e:
-    st.error(f"스크립트 경로를 찾는 중 에러 발생: {e}")
-    st.info("Streamlit을 로컬에서 실행할 때 `__file__` 관련 에러가 발생할 수 있습니다. 폰트 경로를 직접 지정해보세요. 예: `font_path = 'pages/NanumGothic.ttf'`")
-
-st.divider()
+    font_path = "c:/Windows/Fonts/malgun.ttf"
+    font_name = fm.FontProperties(fname=font_path).get_name()
+    plt.rc('font', family=font_name)
+    plt.rcParams['axes.unicode_minus'] = False
+except Exception:
+    pass # 폰트가 없어도 앱이 멈추지 않도록 함
 
 # --- Supabase 연결 ---
 url = st.secrets["SUPABASE_URL"]
@@ -60,22 +39,38 @@ try:
         
         unique_months = sorted(df['month'].unique(), reverse=True)
         selected_month = col1.selectbox("분석할 월을 선택하세요:", unique_months)
-        selected_user = col2.selectbox("누구의 통계를 볼까요?:", USERS)
+        
+        # [수정] 사용자 선택 필터에 '전체' 옵션 추가
+        view_option = ["전체"] + USERS
+        selected_user = col2.selectbox("누구의 통계를 볼까요?:", view_option)
 
+        # [수정] 필터링 로직 변경
         df_month_filtered = df[df['month'] == selected_month]
-        df_selected = df_month_filtered[df_month_filtered['user_name'] == selected_user]
-        st.subheader(f"'{selected_month}' {selected_user}님 지출 분석")
+        if selected_user == "전체":
+            df_selected = df_month_filtered
+            st.subheader(f"'{selected_month}' 전체 지출 분석")
+        else:
+            df_selected = df_month_filtered[df_month_filtered['user_name'] == selected_user]
+            st.subheader(f"'{selected_month}' {selected_user}님 지출 분석")
 
         if not df_selected.empty:
+            # ❗❗ --- 여기가 수정된 부분입니다 --- ❗❗
             total_spent = df_selected['amount'].sum()
-            avg_spent = df_selected['amount'].mean()
             expense_count = len(df_selected)
+            
+            # 1. 지출이 있었던 '날'의 수를 셉니다.
+            days_with_expenses = df_selected['created_at'].dt.date.nunique()
+            
+            # 2. 하루 평균 지출액을 계산합니다. (0으로 나누는 오류 방지)
+            daily_avg_spent = total_spent / days_with_expenses if days_with_expenses > 0 else 0
 
+            # 3. st.metric 위젯을 수정합니다.
             metric_col1, metric_col2, metric_col3 = st.columns(3)
             metric_col1.metric("총 지출액", f"${total_spent:,.0f} ")
-            metric_col2.metric("평균 지출액", f"${avg_spent:,.0f} ")
+            metric_col2.metric("하루 평균 지출액", f"${daily_avg_spent:,.0f} ") # <- 라벨과 값 변경
             metric_col3.metric("총 지출 건수", f"{expense_count} 건")
             st.divider()
+            # ❗❗ --- 수정 끝 --- ❗❗
 
             category_summary = df_selected.groupby('description')['amount'].sum().sort_values(ascending=False)
             
