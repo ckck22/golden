@@ -11,8 +11,8 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 USERS = {
-    "강나윤": 1000.00,
-    "김채린": 800.00
+    "강나윤": 1800.00,
+    "김채린": 1600.00
 }
 
 TARGET_TZ = ZoneInfo("America/Chicago")
